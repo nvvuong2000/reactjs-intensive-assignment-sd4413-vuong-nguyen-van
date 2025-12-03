@@ -13,7 +13,7 @@ const fakeUser = {
 const AuthenticatedContext = createContext<User|null>(null);
 
 const AuthenticatedProvider = ({children}: {children: ReactElement}) => {
-    return (<AuthenticatedContext.Provider value={fakeUser}>{children}</AuthenticatedContext.Provider>)
+    return (<AuthenticatedContext.Provider value={null}>{children}</AuthenticatedContext.Provider>)
 }
 
 export { AuthenticatedProvider, AuthenticatedContext};

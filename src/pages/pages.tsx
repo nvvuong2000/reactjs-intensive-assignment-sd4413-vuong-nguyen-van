@@ -4,6 +4,7 @@ import {Outlet} from "react-router";
 import Footer from "../components/footer/footer";
 import React, {useContext} from "react";
 import {AuthenticatedContext} from "../shared/Authenticated";
+import Login from "./auth/login/Login";
 const Pages = () => {
     const isAuthenticated = useContext(AuthenticatedContext)
 
@@ -22,7 +23,7 @@ const Pages = () => {
                         </main>
                     </div>
                 </div>
-            ) : <Outlet></Outlet>
+            ) : <Login></Login>
 
             }
 
