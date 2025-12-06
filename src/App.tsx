@@ -1,8 +1,9 @@
 import React from 'react';
 import './App.css';
-import {RouterProvider, } from "react-router";
+import { RouterProvider } from "react-router";
 import appRouter from "./app.router";
-import {AuthenticatedProvider} from "./shared/Authenticated";
+import { Provider } from 'react-redux';
+import { store } from './store/store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UserDataProvider } from './contexts/UserDataContext';
 
@@ -10,14 +11,14 @@ const queryClient = new QueryClient();
 
 function App() {
     return (
-        <QueryClientProvider client={queryClient}>
-            <AuthenticatedProvider>
+        <Provider store={store}>
+            <QueryClientProvider client={queryClient}>
                 <UserDataProvider>
                     <RouterProvider router={appRouter} />
                 </UserDataProvider>
-            </AuthenticatedProvider>
-        </QueryClientProvider>
-    )
+            </QueryClientProvider>
+        </Provider>
+    );
 }
 
 export default App;

@@ -1,8 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState, useEffect, useContext } from "react";
-import { AuthenticatedContext } from "../../../shared/Authenticated";
+import { useState, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "../../../store/hooks";
+import { setUser, setToken, logout } from "../../../store/slices/authSlice";
 
 interface LoginFormData {
     username: string;
@@ -61,7 +62,8 @@ const fetchCurrentUser = async (token: string): Promise<User> => {
 };
 
 const Login = () => {
-    const authContext = useContext(AuthenticatedContext);
+    const dispatch = useAppDispatch();
+    const { token } = useAppSelector(state => state.auth);
     const navigate = useNavigate();
     const [localToken, setLocalToken] = useState<string | null>(null);
 
@@ -74,8 +76,7 @@ const Login = () => {
     const loginMutation = useMutation({
         mutationFn: loginUser,
         onSuccess: (data) => {
-            localStorage.setItem('authToken', data.accessToken);
-            authContext?.setToken(data.accessToken);
+            dispatch(setToken(data.accessToken));
             setLocalToken(data.accessToken);
         },
         onError: (error) => {
@@ -91,10 +92,10 @@ const Login = () => {
     });
 
     useEffect(() => {
-        if (user && authContext) {
-            // Store user in auth context with role mapping
+        if (user) {
+            // Store user in Redux with role mapping
             const userRole = user.role === 'admin' ? 'officer' : 'user';
-            authContext.setUser({
+            dispatch(setUser({
                 id: user.id,
                 username: user.username,
                 email: user.email,
@@ -103,23 +104,22 @@ const Login = () => {
                 gender: user.gender,
                 image: user.image,
                 role: userRole
-            });
+            }));
             // Navigate based on role
             if (userRole === 'officer') {
-                
                 navigate('/pages/review');
             } else {
-                navigate(`/pages/user/${user.id}/pi`);
+                navigate(`/pages/user/${user.id}/personal-information`);
             }
         }
-    }, [user, authContext, navigate]);
+    }, [user, dispatch, navigate]);
 
     const onSubmit = (data: LoginFormData) => {
         loginMutation.mutate(data);
     };
 
     const handleLogout = () => {
-        authContext?.logout();
+        dispatch(logout());
         setLocalToken(null);
     };
 

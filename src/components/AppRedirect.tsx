@@ -1,6 +1,5 @@
-import { useContext } from "react";
 import { Navigate } from "react-router-dom";
-import { AuthenticatedContext } from "../shared/Authenticated";
+import { useAppSelector } from "../store/hooks";
 
 export type RedirectType = 'role-based' | 'default-route' | 'fallback';
 
@@ -23,8 +22,7 @@ interface FallbackRedirectProps {
 type RedirectProps = RoleBasedRedirectProps | DefaultRouteRedirectProps | FallbackRedirectProps;
 
 export const AppRedirect = (props: RedirectProps) => {
-    const authContext = useContext(AuthenticatedContext);
-    const user = authContext?.user;
+    const user = useAppSelector(state => state.auth.user);
 
     switch (props.type) {
         case 'role-based':
