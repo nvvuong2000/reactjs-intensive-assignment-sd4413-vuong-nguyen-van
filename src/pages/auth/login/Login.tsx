@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import { AuthenticatedContext } from "../../../shared/Authenticated";
 
 interface LoginFormData {
     username: string;
@@ -60,7 +61,9 @@ const fetchCurrentUser = async (token: string): Promise<User> => {
 };
 
 const Login = () => {
-    const [token, setToken] = useState<string | null>(null);
+    const authContext = useContext(AuthenticatedContext);
+    const navigate = useNavigate();
+    const [localToken, setLocalToken] = useState<string | null>(null);
 
     const {
         register,
@@ -72,7 +75,8 @@ const Login = () => {
         mutationFn: loginUser,
         onSuccess: (data) => {
             localStorage.setItem('authToken', data.accessToken);
-            setToken(data.accessToken);
+            authContext?.setToken(data.accessToken);
+            setLocalToken(data.accessToken);
         },
         onError: (error) => {
             console.error('Login error:', error);
@@ -80,26 +84,43 @@ const Login = () => {
     });
 
     const { data: user, isLoading: isUserLoading, error: userError } = useQuery({
-        queryKey: ['currentUser', token],
-        queryFn: () => fetchCurrentUser(token!),
-        enabled: !!token,
+        queryKey: ['currentUser', localToken],
+        queryFn: () => fetchCurrentUser(localToken!),
+        enabled: !!localToken,
         retry: 1,
     });
 
     useEffect(() => {
-        console.log('User data updated:', user);
-        console.log('Token:', token);
-        console.log('Is loading:', isUserLoading);
-        console.log('Error:', userError);
-    }, [user, token, isUserLoading, userError]);
+        if (user && authContext) {
+            // Store user in auth context with role mapping
+            const userRole = user.role === 'admin' ? 'officer' : 'user';
+            authContext.setUser({
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                gender: user.gender,
+                image: user.image,
+                role: userRole
+            });
+            // Navigate based on role
+            if (userRole === 'officer') {
+                
+                navigate('/pages/review');
+            } else {
+                navigate(`/pages/user/${user.id}/pi`);
+            }
+        }
+    }, [user, authContext, navigate]);
 
     const onSubmit = (data: LoginFormData) => {
         loginMutation.mutate(data);
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('authToken');
-        setToken(null);
+        authContext?.logout();
+        setLocalToken(null);
     };
 
     if (user) {

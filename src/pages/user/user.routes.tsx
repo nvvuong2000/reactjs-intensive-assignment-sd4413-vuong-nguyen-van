@@ -2,6 +2,8 @@ import {RouteObject} from "react-router";
 import PersonalInformation from "./personal-information/personal-information";
 import UserKYC from "./kyc/kyc";
 import User from "./user";
+import Review from "../review/Review";
+import { ProtectedRoute, RoleBasedRoute } from "../../components/ProtectedRoute";
 
 const userRoutes: RouteObject[] = [
     {
@@ -9,14 +11,30 @@ const userRoutes: RouteObject[] = [
         element: <User/>,
         children: [
             {
-                path: ':id/pi',
-                element: <PersonalInformation/>
+                path: ':id/personal-information',
+                element: (
+                    <ProtectedRoute allowOwnProfileOnly={true}>
+                        <PersonalInformation/>
+                    </ProtectedRoute>
+                )
             },
             {
                 path: ':id/kyc',
-                element: <UserKYC></UserKYC>
+                element: (
+                    <ProtectedRoute allowOwnProfileOnly={true}>
+                        <UserKYC/>
+                    </ProtectedRoute>
+                )
             }
         ]
+    },
+    {
+        path: 'review',
+        element: (
+            <RoleBasedRoute allowedRoles={['officer']}>
+                <Review/>
+            </RoleBasedRoute>
+        )
     }
 ]
 

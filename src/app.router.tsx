@@ -1,10 +1,11 @@
 import pagesRoutes from "./pages/pages.routes";
-import {createBrowserRouter, Navigate} from "react-router-dom";
+import {createBrowserRouter} from "react-router-dom";
+import { AppRedirect } from "./components/AppRedirect";
 
 const appRouter = createBrowserRouter([
     {
         path: '',
-        element: <Navigate to="/pages" replace />
+        element: <AppRedirect type="default-route" path="/pages" />
     },
     ...pagesRoutes
 ])
