@@ -1,6 +1,6 @@
 import { ReactNode, useContext } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { AuthenticatedContext } from "../shared/Authenticated";
+import { useAppSelector } from "../store/hooks";
 import { getAuthRedirect } from "./AppRedirect";
 
 interface ProtectedRouteProps {
@@ -10,14 +10,12 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requiredRole, allowOwnProfileOnly }: ProtectedRouteProps) => {
-    const authContext = useContext(AuthenticatedContext);
     const { id: urlUserId } = useParams<{ id: string }>();
+    const { user, isAuthenticated } = useAppSelector(state => state.auth);
 
-    const authRedirect = getAuthRedirect(authContext);
-    if (authRedirect) return authRedirect;
-
-    const { user } = authContext!;
-    if (!user) return <Navigate to="/auth/login" replace />;
+    if (!isAuthenticated || !user) {
+        return <Navigate to="/auth/login" replace />;
+    }
 
     if (requiredRole && user.role !== requiredRole) {
         if (user.role !== 'officer') {
@@ -39,14 +37,11 @@ interface RoleBasedRouteProps {
 }
 
 export const RoleBasedRoute = ({ children, allowedRoles }: RoleBasedRouteProps) => {
-    const authContext = useContext(AuthenticatedContext);
+    const { user, isAuthenticated } = useAppSelector(state => state.auth);
 
-    const authRedirect = getAuthRedirect(authContext);
-    if (authRedirect) return authRedirect;
-
-    const { user } = authContext!;
-    if (!user) return <Navigate to="/auth/login" replace />;
-
+    if (!isAuthenticated || !user) {
+        return <Navigate to="/auth/login" replace />;
+    }
     if (!allowedRoles.includes(user.role)) {
         return <Navigate to="/auth/login" replace />;
     }

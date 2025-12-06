@@ -1,8 +1,9 @@
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AuthenticatedContext } from '../../../shared/Authenticated';
 import { User } from '../../../contexts/UserDataContext';
+import { useAppSelector } from '../../../store/hooks';
+import { ReviewData } from '../../../store/slices/reviewSlice';
 
 interface PersonalInfo {
     firstName: string;
@@ -21,12 +22,12 @@ interface PersonalInfo {
 }
 
 const PersonalInformation = () => {
-    const authContext = useContext(AuthenticatedContext);
     const { id: urlUserId } = useParams<{ id: string }>();
     const navigate = useNavigate();
     
-    const currentUser = authContext?.user;
+    const currentUser = useAppSelector(state => state.auth.user);
     const isOfficer = currentUser?.role === 'officer';
+    const { reviewData: globalReviewData } = useAppSelector(state => state.review);
 
     const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
         firstName: '',
@@ -43,6 +44,8 @@ const PersonalInformation = () => {
         postalCode: '',
         profileImage: ''
     });
+
+    const [localReviewData, setLocalReviewData] = useState<{status: 'pending' | 'approved' | 'rejected', reviewedAt: string, reviewedBy: string} | null>(null);
 
     const { data: fetchedUser, isLoading, error } = useQuery<User>({
         queryKey: ['user', urlUserId],
@@ -119,18 +122,10 @@ const PersonalInformation = () => {
 
     useEffect(() => {
         if (urlUserId) {
-            const savedReviewData = localStorage.getItem('reviewData');
-            if (savedReviewData) {
-                try {
-                    const parsed = JSON.parse(savedReviewData);
-                    const userId = parseInt(urlUserId);
-                    setReviewData(parsed[userId] || null);
-                } catch (error) {
-                    console.error('Failed to parse review data:', error);
-                }
-            }
+            const userId = parseInt(urlUserId);
+            setLocalReviewData(globalReviewData[userId] || null);
         }
-    }, [urlUserId]);
+    }, [urlUserId, globalReviewData]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -193,14 +188,14 @@ const PersonalInformation = () => {
                 <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">
                     Personal Information {isOfficer && `(Viewing User ${urlUserId})`}
                 </h1>
-                {reviewData && (
+                {localReviewData && (
                     <div className="mt-2">
-                        <span className={`text-sm font-medium px-2.5 py-0.5 rounded ${getStatusColor(reviewData.status)}`}>
-                            KYC Status: {reviewData.status.toUpperCase()}
+                        <span className={`text-sm font-medium px-2.5 py-0.5 rounded ${getStatusColor(localReviewData.status)}`}>
+                            KYC Status: {localReviewData.status.toUpperCase()}
                         </span>
-                        {reviewData.reviewedBy && (
+                        {localReviewData.reviewedBy && (
                             <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                                Reviewed by {reviewData.reviewedBy} on {reviewData.reviewedAt ? new Date(reviewData.reviewedAt).toLocaleDateString() : ''}
+                                Reviewed by {localReviewData.reviewedBy} on {localReviewData.reviewedAt ? new Date(localReviewData.reviewedAt).toLocaleDateString() : ''}
                             </span>
                         )}
                     </div>

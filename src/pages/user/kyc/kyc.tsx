@@ -1,7 +1,7 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { AuthenticatedContext } from '../../../shared/Authenticated';
+import { useAppSelector } from '../../../store/hooks';
 import BasicInfoSection from './components/BasicInfoSection';
 import AddressesSection from './components/AddressesSection';
 import EmailsSection from './components/EmailsSection';
@@ -145,11 +145,11 @@ const UserKYC = () => {
         setInvestment(prev => ({ ...prev, [field]: value }));
     };
 
-    const authContext = useContext(AuthenticatedContext);
+    const { user } = useAppSelector(state => state.auth);
     const { id: urlUserId } = useParams<{ id: string }>();
     const location = useLocation();
 
-    const currentUser = authContext?.user;
+    const currentUser = user;
     const isOfficer = currentUser?.role === 'officer';
             const fetchedUser = location.state?.userData;
         const { data: apiUser, isLoading: isApiLoading } = useQuery({

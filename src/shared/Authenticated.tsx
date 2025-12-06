@@ -1,4 +1,6 @@
-import {createContext, ReactElement, useState, useEffect} from "react";
+import { createContext, ReactElement, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { setUser, setToken, logout, setLoading } from "../store/slices/authSlice";
 
 export interface AuthUser {
     id: number;
@@ -22,55 +24,58 @@ interface AuthContextType {
 
 const AuthenticatedContext = createContext<AuthContextType | null>(null);
 
-const AuthenticatedProvider = ({children}: {children: ReactElement}) => {
-    const [user, setUser] = useState<AuthUser | null>(null);
-    const [token, setToken] = useState<string | null>(() => {
-        return localStorage.getItem('authToken');
-    });
+const AuthenticatedProvider = ({ children }: { children: ReactElement }) => {
+    const dispatch = useAppDispatch();
+    const { user, token, isAuthenticated, isLoading } = useAppSelector(state => state.auth);
 
-    // Hydrate user from token on app load
     useEffect(() => {
-        const storedToken = localStorage.getItem('authToken');
-        if (storedToken && !token) {
-            setToken(storedToken);
-        }
-        // If token exists but user is not set, fetch user info
-        if (storedToken && !user) {
-            fetch('https://dummyjson.com/user/me', {
-                headers: { 'Authorization': `Bearer ${storedToken}` }
-            })
-                .then(res => res.json())
-                .then(data => {
-                    // Map role: admin -> officer, others -> user
-                    const userRole = data.role === 'admin' ? 'officer' : 'user';
-                    setUser({
-                        id: data.id,
-                        username: data.username,
-                        email: data.email,
-                        firstName: data.firstName,
-                        lastName: data.lastName,
-                        gender: data.gender,
-                        image: data.image,
-                        role: userRole
+        const initializeAuth = async () => {
+            dispatch(setLoading(true));
+            const storedToken = localStorage.getItem('authToken');
+            if (storedToken) {
+                dispatch(setToken(storedToken));
+                try {
+                    const response = await fetch('https://dummyjson.com/user/me', {
+                        headers: { 'Authorization': `Bearer ${storedToken}` }
                     });
-                })
-                .catch(() => setUser(null));
-        }
-    }, []);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const userRole = data.role === 'admin' ? 'officer' : 'user';
+                        dispatch(setUser({
+                            id: data.id,
+                            username: data.username,
+                            email: data.email,
+                            firstName: data.firstName,
+                            lastName: data.lastName,
+                            gender: data.gender,
+                            image: data.image,
+                            role: userRole
+                        }));
+                    } else {
+                        dispatch(setUser(null));
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch user:', error);
+                    dispatch(setUser(null));
+                }
+            }
+            dispatch(setLoading(false));
+        };
 
-    const logout = () => {
-        setUser(null);
-        setToken(null);
-        localStorage.removeItem('authToken');
+        initializeAuth();
+    }, [dispatch]);
+
+    const handleLogout = () => {
+        dispatch(logout());
     };
 
     const value: AuthContextType = {
         user,
-        setUser,
-        isAuthenticated: !!user && !!token,
+        setUser: (user) => dispatch(setUser(user)),
+        isAuthenticated,
         token,
-        setToken,
-        logout
+        setToken: (token) => dispatch(setToken(token)),
+        logout: handleLogout
     };
 
     return (
@@ -80,4 +85,4 @@ const AuthenticatedProvider = ({children}: {children: ReactElement}) => {
     );
 }
 
-export { AuthenticatedProvider, AuthenticatedContext};
+export { AuthenticatedProvider, AuthenticatedContext };

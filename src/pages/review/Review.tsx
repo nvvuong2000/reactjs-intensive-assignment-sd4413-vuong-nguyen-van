@@ -1,7 +1,8 @@
-import { useContext, useState, useEffect } from "react";
-import { AuthenticatedContext } from "../../shared/Authenticated";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useAppSelector, useAppDispatch } from "../../store/hooks";
+import { updateReview, loadReviewData } from "../../store/slices/reviewSlice";
 
 interface ReviewedUser {
     id: number;
@@ -23,15 +24,24 @@ interface ReviewData {
 }
 
 const Review = () => {
-    const authContext = useContext(AuthenticatedContext);
-    const localToken = authContext?.token;
-    const user = authContext?.user;
+    const dispatch = useAppDispatch();
+    const { user, token } = useAppSelector(state => state.auth);
+    const { reviewData } = useAppSelector(state => state.review);
     const isOfficer = user?.role === 'officer';
-    const [reviewData, setReviewData] = useState<ReviewData>({});
-    const { data: reviewedUser, isLoading: isUserLoading, error: userError } = useQuery({
-        queryKey: ['currentUser', localToken],
-        queryFn: () => fetchCurrentUser(localToken!),
-        enabled: !!localToken,
+
+    const [localReviewData, setLocalReviewData] = useState<ReviewData>({});
+
+    useEffect(() => {
+        dispatch(loadReviewData());
+    }, [dispatch]);
+
+    useEffect(() => {
+        setLocalReviewData(reviewData);
+    }, [reviewData]);
+    const { data: usersData, isLoading: isUserLoading, error: userError } = useQuery({
+        queryKey: ['currentUser', token],
+        queryFn: () => fetchCurrentUser(token!),
+        enabled: !!token,
         retry: 1,
     });
 
@@ -50,43 +60,29 @@ const Review = () => {
     };
 
     useEffect(() => {
-        const savedReviewData = localStorage.getItem('reviewData');
-        if (savedReviewData) {
-            try {
-                const parsed = JSON.parse(savedReviewData);
-                setReviewData(parsed);
-            } catch (error) {
-                console.error('Failed to parse review data from localStorage:', error);
-            }
-        }
-    }, []);
+        dispatch(loadReviewData());
+    }, [dispatch]);
 
-    const saveReviewData = (newReviewData: ReviewData) => {
-        setReviewData(newReviewData);
-        localStorage.setItem('reviewData', JSON.stringify(newReviewData));
-    };
+    useEffect(() => {
+        setLocalReviewData(reviewData);
+    }, [reviewData]);
 
     const reviewUser = (userId: number, status: 'approved' | 'rejected') => {
         if (!user) return;
-
-        const newReviewData = {
-            ...reviewData,
-            [userId]: {
-                status,
-                reviewedAt: new Date().toISOString(),
-                reviewedBy: user.firstName + ' ' + user.lastName
-            }
-        };
-        saveReviewData(newReviewData);
+        dispatch(updateReview({
+            userId,
+            status,
+            reviewedBy: `${user.firstName} ${user.lastName}`
+        }));
     };
 
-    const users: ReviewedUser[] = Array.isArray(reviewedUser) ? reviewedUser : [];
+    const users: ReviewedUser[] = Array.isArray(usersData) ? usersData : [];
 
     const displayedUsers = users.map(user => ({
         ...user,
-        kycStatus: reviewData[user.id]?.status || 'pending',
-        reviewedAt: reviewData[user.id]?.reviewedAt,
-        reviewedBy: reviewData[user.id]?.reviewedBy
+        kycStatus: localReviewData[user.id]?.status || 'pending',
+        reviewedAt: localReviewData[user.id]?.reviewedAt,
+        reviewedBy: localReviewData[user.id]?.reviewedBy
     }));
 
     const getStatusColor = (status: string) => {

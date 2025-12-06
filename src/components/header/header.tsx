@@ -1,9 +1,11 @@
-import React, {useContext} from "react";
-import {Link} from "react-router-dom";
-import {AuthenticatedContext} from "../../shared/Authenticated";
+import React from "react";
+import { Link } from "react-router-dom";
+import { useAppSelector, useAppDispatch } from "../../store/hooks";
+import { logout } from "../../store/slices/authSlice";
 
 const Header = () => {
-    const isAuthenticated = useContext(AuthenticatedContext);
+    const dispatch = useAppDispatch();
+    const { user, isAuthenticated } = useAppSelector(state => state.auth);
     const links: Array<Record<string, string>> = [];
     return (
         <nav className="fixed z-30 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">

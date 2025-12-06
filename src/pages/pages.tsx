@@ -1,17 +1,18 @@
 import Header from "../components/header/header";
 import Sidebar from "../components/sidebar/sidebar";
-import {Outlet} from "react-router";
+import { Outlet } from "react-router";
 import Footer from "../components/footer/footer";
-import React, {useContext} from "react";
-import {AuthenticatedContext} from "../shared/Authenticated";
+import React from "react";
+import { useAppSelector } from "../store/hooks";
 import Login from "./auth/login/Login";
+
 const Pages = () => {
-    const isAuthenticated = useContext(AuthenticatedContext)
+    const { isAuthenticated } = useAppSelector(state => state.auth);
     return (
         <>
             <Header/>
 
-            { isAuthenticated?.isAuthenticated ? (
+            { isAuthenticated ? (
                 <div className="flex pt-16 overflow-hidden bg-gray-50 dark:bg-gray-900">
                     <Sidebar/>
                     <div id="main-content"
