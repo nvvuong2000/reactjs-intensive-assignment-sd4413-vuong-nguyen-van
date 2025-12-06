@@ -114,6 +114,36 @@ const PersonalInformation = () => {
     const displayUser = fetchedUser;
     const isOwnProfile = currentUser?.id === displayUser?.id;
     const readOnly = !isOwnProfile;
+
+    const [reviewData, setReviewData] = useState<{status: string, reviewedAt?: string, reviewedBy?: string} | null>(null);
+
+    useEffect(() => {
+        if (urlUserId) {
+            const savedReviewData = localStorage.getItem('reviewData');
+            if (savedReviewData) {
+                try {
+                    const parsed = JSON.parse(savedReviewData);
+                    const userId = parseInt(urlUserId);
+                    setReviewData(parsed[userId] || null);
+                } catch (error) {
+                    console.error('Failed to parse review data:', error);
+                }
+            }
+        }
+    }, [urlUserId]);
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'approved':
+                return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+            case 'rejected':
+                return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+            default:
+                return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+        }
+    };
     
     if (isLoading) return <div className="p-8 text-center">Loading...</div>;
     if (error) return <div className="p-8 text-center text-red-500">Failed to load user info</div>;
@@ -163,6 +193,18 @@ const PersonalInformation = () => {
                 <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl dark:text-white">
                     Personal Information {isOfficer && `(Viewing User ${urlUserId})`}
                 </h1>
+                {reviewData && (
+                    <div className="mt-2">
+                        <span className={`text-sm font-medium px-2.5 py-0.5 rounded ${getStatusColor(reviewData.status)}`}>
+                            KYC Status: {reviewData.status.toUpperCase()}
+                        </span>
+                        {reviewData.reviewedBy && (
+                            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                                Reviewed by {reviewData.reviewedBy} on {reviewData.reviewedAt ? new Date(reviewData.reviewedAt).toLocaleDateString() : ''}
+                            </span>
+                        )}
+                    </div>
+                )}
             </div>
             <div
                 className="p-4 mb-4 bg-white border border-gray-200 rounded-lg shadow-sm 2xl:col-span-2 dark:border-gray-700 sm:p-6 dark:bg-gray-800">
