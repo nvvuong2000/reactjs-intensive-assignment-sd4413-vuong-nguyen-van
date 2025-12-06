@@ -7,12 +7,11 @@ import {AuthenticatedContext} from "../shared/Authenticated";
 import Login from "./auth/login/Login";
 const Pages = () => {
     const isAuthenticated = useContext(AuthenticatedContext)
-
     return (
         <>
             <Header/>
 
-            { isAuthenticated ? (
+            { isAuthenticated?.isAuthenticated ? (
                 <div className="flex pt-16 overflow-hidden bg-gray-50 dark:bg-gray-900">
                     <Sidebar/>
                     <div id="main-content"
