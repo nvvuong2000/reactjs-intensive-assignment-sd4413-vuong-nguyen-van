@@ -62,10 +62,19 @@ const fetchCurrentUser = async (token: string): Promise<User> => {
 };
 
 const Login = () => {
-    const dispatch = useAppDispatch();
-    const { token } = useAppSelector(state => state.auth);
     const navigate = useNavigate();
+    const dispatch = useAppDispatch();
+    const { user, isAuthenticated } = useAppSelector(state => state.auth);
     const [localToken, setLocalToken] = useState<string | null>(null);
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            if (user.role === 'officer') {
+                navigate('/pages/review');
+            } else {
+                navigate(`/pages/user/${user.id}/personal-information`);
+            }
+        }
+    }, [isAuthenticated, user, navigate]);
 
     const {
         register,
@@ -84,7 +93,7 @@ const Login = () => {
         }
     });
 
-    const { data: user, isLoading: isUserLoading, error: userError } = useQuery({
+    const { data: currentUser, isLoading: isUserLoading, error: userError } = useQuery({
         queryKey: ['currentUser', localToken],
         queryFn: () => fetchCurrentUser(localToken!),
         enabled: !!localToken,
@@ -92,27 +101,25 @@ const Login = () => {
     });
 
     useEffect(() => {
-        if (user) {
-            // Store user in Redux with role mapping
-            const userRole = user.role === 'admin' ? 'officer' : 'user';
+        if (currentUser) {
+            const userRole = currentUser.role === 'admin' ? 'officer' : 'user';
             dispatch(setUser({
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                gender: user.gender,
-                image: user.image,
+                id: currentUser.id,
+                username: currentUser.username,
+                email: currentUser.email,
+                firstName: currentUser.firstName,
+                lastName: currentUser.lastName,
+                gender: currentUser.gender,
+                image: currentUser.image,
                 role: userRole
             }));
-            // Navigate based on role
             if (userRole === 'officer') {
                 navigate('/pages/review');
             } else {
-                navigate(`/pages/user/${user.id}/personal-information`);
+                navigate(`/pages/user/${currentUser.id}/personal-information`);
             }
         }
-    }, [user, dispatch, navigate]);
+    }, [currentUser, dispatch, navigate]);
 
     const onSubmit = (data: LoginFormData) => {
         loginMutation.mutate(data);
@@ -123,30 +130,33 @@ const Login = () => {
         setLocalToken(null);
     };
 
-    if (user) {
-        return user.role === 'admin' ? <><p>This is admin page</p></> :(
+    if (isAuthenticated && user) {
+        return null;
+    }
+    if (currentUser) {
+        return currentUser.role === 'admin' ? <><p>This is admin page</p></> :(
             <div className="flex flex-col items-center justify-center px-6 pt-8 mx-auto md:h-screen pt:mt-0 dark:bg-gray-900">
                 <div className="w-full max-w-xl p-6 space-y-8 sm:p-8 bg-white rounded-lg shadow dark:bg-gray-800">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center">
                         Welcome Back!
                     </h2>
                     <div className="text-center space-y-4">
-                        {user.image && (
+                        {currentUser.image && (
                             <img 
-                                src={user.image} 
+                                src={currentUser.image} 
                                 alt="Profile" 
                                 className="w-24 h-24 rounded-full mx-auto"
                             />
                         )}
                         <div className="space-y-2">
                             <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                                {user.firstName} {user.lastName}
+                                {currentUser.firstName} {currentUser.lastName}
                             </p>
                             <p className="text-gray-600 dark:text-gray-300">
-                                Username: {user.username}
+                                Username: {currentUser.username}
                             </p>
                             <p className="text-gray-600 dark:text-gray-300">
-                                Email: {user.email}
+                                Email: {currentUser.email}
                             </p>
                         </div>
                         <button 
