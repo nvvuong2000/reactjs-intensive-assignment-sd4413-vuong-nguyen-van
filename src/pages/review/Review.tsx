@@ -1,7 +1,8 @@
-import { useContext, useState,useEffect } from "react";
+import { useContext, useState, useEffect } from "react";
 import { AuthenticatedContext } from "../../shared/Authenticated";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
+
 interface ReviewedUser {
     id: number;
     username: string;
@@ -13,9 +14,20 @@ interface ReviewedUser {
     reviewedBy?: string;
 }
 
+interface ReviewData {
+    [userId: number]: {
+        status: 'pending' | 'approved' | 'rejected';
+        reviewedAt: string;
+        reviewedBy: string;
+    };
+}
+
 const Review = () => {
     const authContext = useContext(AuthenticatedContext);
     const localToken = authContext?.token;
+    const user = authContext?.user;
+    const isOfficer = user?.role === 'officer';
+    const [reviewData, setReviewData] = useState<ReviewData>({});
     const { data: reviewedUser, isLoading: isUserLoading, error: userError } = useQuery({
         queryKey: ['currentUser', localToken],
         queryFn: () => fetchCurrentUser(localToken!),
@@ -37,11 +49,45 @@ const Review = () => {
         return data?.users;
     };
 
-    const users: ReviewedUser[] = Array.isArray(reviewedUser) ? reviewedUser : [];
-    const user = authContext?.user;
-    const isOfficer = user?.role === 'officer';
+    useEffect(() => {
+        const savedReviewData = localStorage.getItem('reviewData');
+        if (savedReviewData) {
+            try {
+                const parsed = JSON.parse(savedReviewData);
+                setReviewData(parsed);
+            } catch (error) {
+                console.error('Failed to parse review data from localStorage:', error);
+            }
+        }
+    }, []);
 
-    const displayedUsers = users;
+    const saveReviewData = (newReviewData: ReviewData) => {
+        setReviewData(newReviewData);
+        localStorage.setItem('reviewData', JSON.stringify(newReviewData));
+    };
+
+    const reviewUser = (userId: number, status: 'approved' | 'rejected') => {
+        if (!user) return;
+
+        const newReviewData = {
+            ...reviewData,
+            [userId]: {
+                status,
+                reviewedAt: new Date().toISOString(),
+                reviewedBy: user.firstName + ' ' + user.lastName
+            }
+        };
+        saveReviewData(newReviewData);
+    };
+
+    const users: ReviewedUser[] = Array.isArray(reviewedUser) ? reviewedUser : [];
+
+    const displayedUsers = users.map(user => ({
+        ...user,
+        kycStatus: reviewData[user.id]?.status || 'pending',
+        reviewedAt: reviewData[user.id]?.reviewedAt,
+        reviewedBy: reviewData[user.id]?.reviewedBy
+    }));
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -126,24 +172,42 @@ const Review = () => {
                                             {reviewedUser.firstName} {reviewedUser.lastName}
                                         </td>
                                         <td className="px-4 py-3">{reviewedUser.email}</td>
-                                        {/* <td className="px-4 py-3">
+                                        <td className="px-4 py-3">
                                             <span className={`text-xs font-medium px-2.5 py-0.5 rounded ${getStatusColor(reviewedUser.kycStatus)}`}>
                                                 {reviewedUser.kycStatus.toUpperCase()}
                                             </span>
-                                        </td> */}
+                                        </td>
                                         {isOfficer && (
                                             <>
                                                 <td className="px-4 py-3">{reviewedUser.reviewedBy || '-'}</td>
-                                                <td className="px-4 py-3">{reviewedUser.reviewedAt || '-'}</td>
+                                                <td className="px-4 py-3">{reviewedUser.reviewedAt ? new Date(reviewedUser.reviewedAt).toLocaleDateString() : '-'}</td>
                                             </>
                                         )}
                                         <td className="px-4 py-3">
-                                            <Link
-                                                to={`/pages/user/${reviewedUser.id}/personal-information`}
-                                                className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                                            >
-                                                View KYC
-                                            </Link>
+                                            <div className="flex space-x-2">
+                                                <Link
+                                                    to={`/pages/user/${reviewedUser.id}/personal-information`}
+                                                    className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                                                >
+                                                    View KYC
+                                                </Link>
+                                                {isOfficer && reviewedUser.kycStatus === 'pending' && (
+                                                    <div className="flex space-x-1">
+                                                        <button
+                                                            onClick={() => reviewUser(reviewedUser.id, 'approved')}
+                                                            className="px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700"
+                                                        >
+                                                            Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={() => reviewUser(reviewedUser.id, 'rejected')}
+                                                            className="px-2 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700"
+                                                        >
+                                                            Reject
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
