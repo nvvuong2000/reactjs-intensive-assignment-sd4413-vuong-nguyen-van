@@ -191,7 +191,7 @@ const Review = () => {
                                                 >
                                                     View KYC
                                                 </Link>
-                                                {isOfficer && reviewedUser.kycStatus === 'pending' && (
+                                                {isOfficer && reviewedUser.id !== user.id && reviewedUser.kycStatus === 'pending' && (
                                                     <div className="flex space-x-1">
                                                         <button
                                                             onClick={() => reviewUser(reviewedUser.id, 'approved')}
