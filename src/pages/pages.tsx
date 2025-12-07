@@ -2,9 +2,10 @@ import Header from "../components/header";
 import Sidebar from "../components/sidebar";
 import { Outlet } from "react-router";
 import Footer from "../components/footer";
-import React from "react";
+import React, { Suspense } from "react";
 import { useAppSelector } from "../store/hooks";
-import Login from "./auth/login/Login";
+import LoadingSpinner from "../components/LoadingSpinner";
+const Login = React.lazy(() => import("./auth/login/Login"));
 
 const Pages = () => {
     const { isAuthenticated } = useAppSelector(state => state.auth);
@@ -23,10 +24,11 @@ const Pages = () => {
                         </main>
                     </div>
                 </div>
-            ) : <Login></Login>
-
-            }
-
+            ) : (
+                <Suspense fallback={<LoadingSpinner />}>
+                    <Login />
+                </Suspense>
+            )}
 
         </>
     )

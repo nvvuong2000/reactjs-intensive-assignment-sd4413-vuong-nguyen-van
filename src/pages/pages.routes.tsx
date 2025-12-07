@@ -1,8 +1,10 @@
-import HomeComponent from "./home/HomeComponent";
+import React, { Suspense } from "react";
 import userRoutes from "./user/user.routes";
 import Pages from "./pages";
 import authRoutes from "./auth/auth.routes";
 import { AppRedirect } from "../components/AppRedirect";
+import LoadingSpinner from "../components/LoadingSpinner";
+const HomeComponent = React.lazy(() => import("./home/HomeComponent"));
 
 const pageRoutes = [
     {
@@ -19,7 +21,11 @@ const pageRoutes = [
             },
             {
                 path: 'home',
-                element: <HomeComponent/>
+                element: (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <HomeComponent/>
+                    </Suspense>
+                )
             },
             ...authRoutes,
             ...userRoutes
