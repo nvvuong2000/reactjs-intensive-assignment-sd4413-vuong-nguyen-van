@@ -1,13 +1,22 @@
 import React from 'react';
+import { calculateNetWorth } from '../../../../utils/netWorthUtils';
 
 interface NetWorthSectionProps {
+    totalIncomes: number;
     totalAssets: number;
     totalLiabilities: number;
-     readOnly?: boolean;
+    totalSources: number;
+    readOnly?: boolean;
 }
 
-const NetWorthSection: React.FC<NetWorthSectionProps> = ({ totalAssets, totalLiabilities, readOnly }) => {
-    const netWorth = totalAssets - totalLiabilities;
+const NetWorthSection: React.FC<NetWorthSectionProps> = ({
+    totalIncomes,
+    totalAssets,
+    totalLiabilities,
+    totalSources,
+    readOnly
+}) => {
+    const netWorth = calculateNetWorth(totalIncomes, totalAssets, totalLiabilities, totalSources);
 
     return (
         <fieldset className="border border-gray-300 rounded-md p-4">
@@ -18,9 +27,10 @@ const NetWorthSection: React.FC<NetWorthSectionProps> = ({ totalAssets, totalLia
                     type="number"
                     id="net-worth-total"
                     value={netWorth}
-                    className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-secondary-color"
+                    className="w-full px-4 py-2 mt-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-secondary-color bg-gray-100 cursor-not-allowed opacity-60"
                     placeholder="Automatically calculated"
                     disabled={readOnly}
+                    readOnly
                 />
             </div>
         </fieldset>
