@@ -1,25 +1,43 @@
+import React, { Suspense } from "react";
 import { RouteObject } from "react-router";
-import Login from "./login/Login";
-import ResetPassword from "./reset-password/reset-password";
-import Auth from "./auth";
-import SignUp from "./sign-up/sign-up";
+import LoadingSpinner from "../../components/LoadingSpinner";
+const Login = React.lazy(() => import("./login/Login"));
+const ResetPassword = React.lazy(() => import("./reset-password/reset-password"));
+const Auth = React.lazy(() => import("./auth"));
+const SignUp = React.lazy(() => import("./sign-up/sign-up"));
 
 const authRoutes: RouteObject[] = [
     {
         path: 'auth',
-        element: <Auth/>,
+        element: (
+            <Suspense fallback={<LoadingSpinner />}>
+                <Auth/>
+            </Suspense>
+        ),
         children: [
             {
                 path: 'login',
-                element: <Login/>
+                element: (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <Login/>
+                    </Suspense>
+                )
             },
             {
                 path: 'sign-up',
-                element: <SignUp/>
+                element: (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <SignUp/>
+                    </Suspense>
+                )
             },
             {
                 path: 'reset-password',
-                element: <ResetPassword/>
+                element: (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <ResetPassword/>
+                    </Suspense>
+                )
             }
         ]
 

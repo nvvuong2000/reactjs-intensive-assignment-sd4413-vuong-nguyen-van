@@ -1,20 +1,28 @@
-import {RouteObject} from "react-router";
-import PersonalInformation from "./personal-information/personal-information";
-import UserKYC from "./kyc/kyc";
-import User from "./user";
-import Review from "../review/Review";
+import React, { Suspense } from "react";
+import { RouteObject } from "react-router";
 import { ProtectedRoute, RoleBasedRoute } from "../../components/ProtectedRoute";
+import LoadingSpinner from "../../components/LoadingSpinner";
+const PersonalInformation = React.lazy(() => import("./personal-information/personal-information"));
+const UserKYC = React.lazy(() => import("./kyc/kyc"));
+const User = React.lazy(() => import("./user"));
+const Review = React.lazy(() => import("../review/Review"));
 
 const userRoutes: RouteObject[] = [
     {
         path: 'user',
-        element: <User/>,
+        element: (
+            <Suspense fallback={<LoadingSpinner />}>
+                <User/>
+            </Suspense>
+        ),
         children: [
             {
                 path: ':id/personal-information',
                 element: (
                     <ProtectedRoute allowOwnProfileOnly={true}>
-                        <PersonalInformation/>
+                        <Suspense fallback={<LoadingSpinner />}>
+                            <PersonalInformation/>
+                        </Suspense>
                     </ProtectedRoute>
                 )
             },
@@ -22,7 +30,9 @@ const userRoutes: RouteObject[] = [
                 path: ':id/kyc',
                 element: (
                     <ProtectedRoute allowOwnProfileOnly={true}>
-                        <UserKYC/>
+                        <Suspense fallback={<LoadingSpinner />}>
+                            <UserKYC/>
+                        </Suspense>
                     </ProtectedRoute>
                 )
             }
@@ -32,7 +42,9 @@ const userRoutes: RouteObject[] = [
         path: 'review',
         element: (
             <RoleBasedRoute allowedRoles={['officer']}>
-                <Review/>
+                <Suspense fallback={<LoadingSpinner />}>
+                    <Review/>
+                </Suspense>
             </RoleBasedRoute>
         )
     }
