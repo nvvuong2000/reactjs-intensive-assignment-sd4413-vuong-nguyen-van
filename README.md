@@ -7,6 +7,16 @@ This project is a preconfigured skeleton for React Training Assigment only, feel
 - Tailwind
 - Flowbite and [Flowbite Admin Template](https://github.com/themesberg/flowbite-admin-dashboard/tree/main)
 
+## Deployment
+
+To deploy your app to Vercel, run:
+
+```
+node deploy.js
+```
+
+See DEPLOYMENT.md for detailed instructions.
+
 # Contribute
 This project is shared internally and customized for training purpose only, please open a pull request for your improvement if any
 
