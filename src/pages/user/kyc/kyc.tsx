@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useRef } from 'react';
+import { useParams, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAppSelector } from '../../../store/hooks';
 import api from '../../../services/api';
@@ -15,316 +15,257 @@ import LiabilitiesSection from './components/LiabilitiesSection';
 import SourceOfWealthSection from './components/SourceOfWealthSection';
 import NetWorthSection from './components/NetWorthSection';
 import InvestmentExperienceSection from './components/InvestmentExperienceSection';
-
-interface Address {
-    country: string;
-    city: string;
-    street: string;
-    postalCode: string;
-}
-
-interface Email {
-    address: string;
-    type: string;
-    preferred: string;
-}
-
-interface Phone {
-    number: string;
-    type: string;
-    preferred: string;
-}
-
-interface IdDoc {
-    type: string;
-    number: string;
-    expiryDate: string;
-    upload: string;
-}
-
-interface Occupation {
-    occupation: string;
-    fromDate: string;
-    toDate: string;
-}
-
-interface Income {
-    type: string;
-    amount: string;
-}
-
-interface Asset {
-    type: string;
-    amount: string;
-}
-
-interface Liability {
-    type: string;
-    amount: string;
-}
-
-interface Source {
-    type: string;
-    amount: string;
-}
-
-interface BasicInfo {
-    firstName: string;
-    lastName: string;
-    middleName: string;
-    dob: string;
-    age: string;
-}
-
-interface Investment {
-    experience: string;
-    riskTolerance: string;
-}
+import { formatDateToDDMMYYYY } from './utils';
+import { basicInfoSchema, addressSchema, emailSchema, phoneSchema, idDocSchema, occupationSchema, incomeSchema, assetSchema, liabilitySchema, sourceSchema, investmentSchema } from './validationSchemas';
+import { ContactType, AddressType, IncomeType, AssetType, LiabilityType, WealthSourceType, ExperienceLevel, RiskTolerance } from './constants';
+import { Address, Email, Phone, IdDoc, Occupation, Income, Asset, Liability, Source, BasicInfo, FormData } from './types';
+import { useKYCState } from './hooks/useKYCState';
+import { useKYCData } from './hooks/useKYCData';
+import { useKYCValidation } from './hooks/useKYCValidation';
+import { useKYCSubmission } from './hooks/useKYCSubmission';
+import { handleChange, addRow, removeRow } from './utils/arrayUtils';
+import { calculateTotals } from './utils/calculationUtils';
+import { scrollToFirstError } from './utils/errorUtils';
 
 const UserKYC = () => {
-    const [basicInfo, setBasicInfo] = useState<BasicInfo>({
-        firstName: '',
-        lastName: '',
-        middleName: '',
-        dob: '',
-        age: ''
+    const {
+        basicInfo,
+        setBasicInfo,
+        addresses,
+        setAddresses,
+        emails,
+        setEmails,
+        phones,
+        setPhones,
+        idDocs,
+        setIdDocs,
+        occupations,
+        setOccupations,
+        incomes,
+        setIncomes,
+        assets,
+        setAssets,
+        liabilities,
+        setLiabilities,
+        sources,
+        setSources,
+        investment,
+        setInvestment,
+        errors,
+        setErrors,
+        basicInfoRef,
+        addressesRef,
+        emailsRef,
+        phonesRef,
+        idDocsRef,
+        occupationsRef,
+        incomesRef,
+        assetsRef,
+        liabilitiesRef,
+        sourcesRef,
+        investmentRef
+    } = useKYCState();
+
+    const { userData, isApiLoading } = useKYCData({
+        basicInfo,
+        setBasicInfo,
+        setAddresses,
+        setEmails,
+        setPhones,
+        setIdDocs,
+        setOccupations,
+        setIncomes,
+        setAssets,
+        setLiabilities,
+        setSources,
+        setInvestment
     });
 
-    const [addresses, setAddresses] = useState<Address[]>([{ country: '', city: '', street: '', postalCode: '' }]);
-    const [emails, setEmails] = useState<Email[]>([{ address: '', type: '', preferred: '' }]);
-    const [phones, setPhones] = useState<Phone[]>([{ number: '', type: '', preferred: '' }]);
-    const [idDocs, setIdDocs] = useState<IdDoc[]>([{ type: '', number: '', expiryDate: '', upload: '' }]);
-    const [occupations, setOccupations] = useState<Occupation[]>([{ occupation: '', fromDate: '', toDate: '' }]);
-    const [incomes, setIncomes] = useState<Income[]>([{ type: '', amount: '' }]);
-    const [assets, setAssets] = useState<Asset[]>([{ type: '', amount: '' }]);
-    const [liabilities, setLiabilities] = useState<Liability[]>([{ type: '', amount: '' }]);
-    const [sources, setSources] = useState<Source[]>([{ type: '', amount: '' }]);
-
-    const totalAssets = assets.reduce((sum, asset) => sum + parseFloat(asset.amount || '0'), 0);
-    const totalLiabilities = liabilities.reduce((sum, liab) => sum + parseFloat(liab.amount || '0'), 0);
-    const [investment, setInvestment] = useState<Investment>({
-        experience: '',
-        riskTolerance: ''
+    const { validateForm } = useKYCValidation({
+        basicInfo,
+        addresses,
+        emails,
+        phones,
+        idDocs,
+        occupations,
+        incomes,
+        assets,
+        liabilities,
+        sources,
+        investment,
+        setErrors
     });
 
-    type ListItem = Record<string, any>;
-    type SetListFn<T> = React.Dispatch<React.SetStateAction<T[]>>;
-
-    const handleChange = <T extends ListItem>(
-        list: T[],
-        setList: SetListFn<T>,
-        index: number,
-        field: keyof T,
-        value: T[keyof T]
-    ) => {
-        const updated = [...list];
-        updated[index][field] = value;
-        setList(updated);
-    };
-
-    const addRow = <T extends ListItem>(
-        list: T[],
-        setList: SetListFn<T>,
-        template: T
-    ) => {
-        setList([...list, template]);
-    };
-
-    const removeRow = <T extends ListItem>(
-        list: T[],
-        setList: SetListFn<T>,
-        index: number
-    ) => {
-        setList(list.filter((_, i) => i !== index));
-    };
-
-    const handleBasicInfoChange = (field: keyof BasicInfo, value: string) => {
-        setBasicInfo(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleInvestmentChange = (field: keyof Investment, value: string) => {
-        setInvestment(prev => ({ ...prev, [field]: value }));
-    };
-
-    const { user } = useAppSelector(state => state.auth);
-    const { id: urlUserId } = useParams<{ id: string }>();
-    const location = useLocation();
-
-    const currentUser = user;
-    const isOfficer = currentUser?.role === 'officer';
-            const fetchedUser = location.state?.userData;
-        const { data: apiUser, isLoading: isApiLoading } = useQuery({
-        queryKey: ['user', urlUserId],
-        queryFn: async () => {
-            if (!urlUserId || fetchedUser) return null;
-            const response = await api.get(`/users/${urlUserId}`);
-            return response.data;
-        },
-        enabled: !!urlUserId && !fetchedUser,
+    const { onFormSubmit } = useKYCSubmission({
+        basicInfo,
+        addresses,
+        emails,
+        phones,
+        idDocs,
+        occupations,
+        incomes,
+        assets,
+        liabilities,
+        sources,
+        investment,
+        userData,
+        validateForm,
+        scrollToFirstError: (errors) => scrollToFirstError(
+            errors,
+            basicInfoRef,
+            addressesRef,
+            emailsRef,
+            phonesRef,
+            idDocsRef,
+            occupationsRef,
+            incomesRef,
+            assetsRef,
+            liabilitiesRef,
+            sourcesRef,
+            investmentRef
+        )
     });
 
-    const userData = fetchedUser || apiUser;
+    const { totalIncomes, totalLiabilities, totalSources, totalAssets } = calculateTotals(incomes, liabilities, sources, assets);
 
     useEffect(() => {
-        const savedKycData = localStorage.getItem(`kycData_${userData?.id}`);
-        const parsed = savedKycData ? JSON.parse(savedKycData) : null;
-        if (parsed) {
-            setBasicInfo(parsed.basicInfo || basicInfo);
-            setAddresses(parsed.addresses || addresses);
-            setEmails(parsed.emails || emails);
-            setPhones(parsed.phones || phones);
-            setIdDocs(parsed.idDocs || idDocs);
-            setOccupations(parsed.occupations || occupations);
-            setIncomes(parsed.incomes || incomes);
-            setAssets(parsed.assets || assets);
-            setLiabilities(parsed.liabilities || liabilities);
-            setSources(parsed.sources || sources);
-            setInvestment(parsed.investment || investment);
-        } else if (userData) {
-            setBasicInfo({
-                firstName: userData.firstName || '',
-                lastName: userData.lastName || '',
-                middleName: userData.maidenName || '',
-                dob: userData.birthDate || '',
-                age: userData.age?.toString() || ''
-            });
-
-            if (userData.address) {
-                setAddresses([{
-                    country: userData.address.state || '',
-                    city: userData.address.city || '',
-                    street: userData.address.address || '',
-                    postalCode: userData.address.postalCode || ''
-                }]);
+        if (basicInfo.dob) {
+            const [day, month, year] = basicInfo.dob.split('/');
+            const birthDate = new Date(`${year}-${month}-${day}`);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
             }
-
-            if (userData.email) {
-                setEmails([{
-                    address: userData.email,
-                    type: 'personal',
-                    preferred: 'yes'
-                }]);
-            }
-
-            if (userData.phone) {
-                setPhones([{
-                    number: userData.phone,
-                    type: 'mobile',
-                    preferred: 'yes'
-                }]);
-            }
+            setBasicInfo(prev => ({ ...prev, age: age.toString() }));
         }
-    }, [userData]);
+    }, [basicInfo.dob]);
 
-;
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const kycData = {
-            basicInfo,
-            addresses,
-            emails,
-            phones,
-            idDocs,
-            occupations,
-            incomes,
-            assets,
-            liabilities,
-            sources,
-            investment
-        };
-        localStorage.setItem(`kycData_${userData?.id}`, JSON.stringify(kycData));
-        alert('KYC data saved to localStorage!');
-    };
-
-    const isOwnProfile = currentUser?.id === userData?.id;
+    const { user } = useAppSelector(state => state.auth);
+    const isOwnProfile = user?.id === userData?.id;
     const readOnly = !isOwnProfile;
     if (isApiLoading) return <div className="p-8 text-center">Loading user data...</div>;
 
     return (
         <>
-            <BasicInfoSection
-                basicInfo={basicInfo}
-                onChange={handleBasicInfoChange}
-                readOnly={readOnly}
-            />
+            <div ref={basicInfoRef}>
+                <BasicInfoSection
+                    basicInfo={basicInfo}
+                    onChange={(field, value) => setBasicInfo(prev => ({ ...prev, [field]: value }))}
+                    errors={errors}
+                    readOnly={readOnly}
+                />
+            </div>
             <div
                 className="p-4 mb-4 bg-white border border-gray-200 rounded-lg shadow-sm 2xl:col-span-2 dark:border-gray-700 sm:p-6 dark:bg-gray-800">
                 <h3 className="mb-4 text-xl font-semibold dark:text-white">Contact Information</h3>
-                <form  className="mt-6 space-y-6" onSubmit={handleSubmit}>
-                    <AddressesSection
-                        addresses={addresses}
-                        onChange={(index, field, value) => handleChange(addresses, setAddresses, index, field, value)}
-                        onAdd={() => addRow(addresses, setAddresses, { country: '', city: '', street: '', postalCode: '' })}
-                        onDelete={(index) => removeRow(addresses, setAddresses, index)}
-                        readOnly={readOnly}
-                    />
-                    <EmailsSection
-                        emails={emails}
-                        onChange={(index, field, value) => handleChange(emails, setEmails, index, field, value)}
-                        onAdd={() => addRow(emails, setEmails, { address: '', type: '', preferred: '' })}
-                        onDelete={(index) => removeRow(emails, setEmails, index)}
-                        readOnly={readOnly}
-                    />
-                    <PhonesSection
-                        phones={phones}
-                        onChange={(index, field, value) => handleChange(phones, setPhones, index, field, value)}
-                        onAdd={() => addRow(phones, setPhones, { number: '', type: '', preferred: '' })}
-                        onDelete={(index) => removeRow(phones, setPhones, index)}
-                        readOnly={readOnly}
-                    />
-                    <IdentificationDocumentsSection
-                        idDocs={idDocs}
-                        onChange={(index, field, value) => handleChange(idDocs, setIdDocs, index, field, value)}
-                        onAdd={() => addRow(idDocs, setIdDocs, { type: '', number: '', expiryDate: '', upload: '' })}
-                        onDelete={(index) => removeRow(idDocs, setIdDocs, index)}
-                        readOnly={readOnly}
-                    />
-                    <OccupationsSection
-                        occupations={occupations}
-                        onChange={(index, field, value) => handleChange(occupations, setOccupations, index, field, value)}
-                        onAdd={() => addRow(occupations, setOccupations, { occupation: '', fromDate: '', toDate: '' })}
-                        onDelete={(index) => removeRow(occupations, setOccupations, index)}
-                        readOnly={readOnly}
-                    />
-                    <IncomesSection
-                        incomes={incomes}
-                        onChange={(index, field, value) => handleChange(incomes, setIncomes, index, field, value)}
-                        onAdd={() => addRow(incomes, setIncomes, { type: '', amount: '' })}
-                        onDelete={(index) => removeRow(incomes, setIncomes, index)}
-                        readOnly={readOnly}
-                    />
-                    <AssetsSection
-                        assets={assets}
-                        onChange={(index, field, value) => handleChange(assets, setAssets, index, field, value)}
-                        onAdd={() => addRow(assets, setAssets, { type: '', amount: '' })}
-                        onDelete={(index) => removeRow(assets, setAssets, index)}
-                        readOnly={readOnly}
-                    />
-
-                    <LiabilitiesSection
-                        liabilities={liabilities}
-                        onChange={(index, field, value) => handleChange(liabilities, setLiabilities, index, field, value)}
-                        onAdd={() => addRow(liabilities, setLiabilities, { type: '', amount: '' })}
-                        onDelete={(index) => removeRow(liabilities, setLiabilities, index)}
-                        readOnly={readOnly}
-                    />
-                    <SourceOfWealthSection
-                        sources={sources}
-                        onChange={(index, field, value) => handleChange(sources, setSources, index, field, value)}
-                        onAdd={() => addRow(sources, setSources, { type: '', amount: '' })}
-                        onDelete={(index) => removeRow(sources, setSources, index)}
-                        readOnly={readOnly}
-                    />
+                <form className="mt-6 space-y-6" onSubmit={onFormSubmit}>
+                    <div ref={addressesRef}>
+                        <AddressesSection
+                            addresses={addresses}
+                            onChange={(index, field, value) => handleChange(addresses, setAddresses, index, field, value, addressSchema, 'addresses', errors, setErrors)}
+                            onAdd={() => addRow(addresses, setAddresses, { country: '', city: '', street: '', state: '', stateCode: '', postalCode: '', type: 'Mailing' })}
+                            onRemove={(index) => removeRow(addresses, setAddresses, index)}
+                            errors={errors.addresses || []}
+                            readOnly={readOnly}
+                        />
+                    </div>
+                    <div ref={emailsRef}>
+                        <EmailsSection
+                            emails={emails}
+                            onChange={(index, field, value) => handleChange(emails, setEmails, index, field, value, emailSchema, 'emails', errors, setErrors)}
+                            onAdd={() => addRow(emails, setEmails, { address: '', type: 'Personal', preferred: false })}
+                            onRemove={(index) => removeRow(emails, setEmails, index)}
+                            errors={errors.emails || []}
+                            readOnly={readOnly}
+                        />
+                    </div>
+                    <div ref={phonesRef}>
+                        <PhonesSection
+                            phones={phones}
+                            onChange={(index, field, value) => handleChange(phones, setPhones, index, field, value, phoneSchema, 'phones', errors, setErrors)}
+                            onAdd={() => addRow(phones, setPhones, { number: '', type: 'Personal', preferred: false })}
+                            onRemove={(index) => removeRow(phones, setPhones, index)}
+                            errors={errors.phones || []}
+                            readOnly={readOnly}
+                        />
+                    </div>
+                    <div ref={idDocsRef}>
+                        <IdentificationDocumentsSection
+                            idDocs={idDocs}
+                            onChange={(index, field, value) => handleChange(idDocs, setIdDocs, index, field, value, idDocSchema, 'idDocs', errors, setErrors)}
+                            onAdd={() => addRow(idDocs, setIdDocs, { type: '', number: '', expiryDate: '', upload: '' })}
+                            onRemove={(index) => removeRow(idDocs, setIdDocs, index)}
+                            errors={errors.idDocs || []}
+                            readOnly={readOnly}
+                        />
+                    </div>
+                    <div ref={occupationsRef}>
+                        <OccupationsSection
+                            occupations={occupations}
+                            onChange={(index, field, value) => handleChange(occupations, setOccupations, index, field, value, occupationSchema, 'occupations', errors, setErrors)}
+                            onAdd={() => addRow(occupations, setOccupations, { occupation: '', fromDate: '', toDate: '' })}
+                            onRemove={(index) => removeRow(occupations, setOccupations, index)}
+                            errors={errors.occupations || []}
+                            readOnly={readOnly}
+                        />
+                    </div>
+                    <div ref={incomesRef}>
+                        <IncomesSection
+                            incomes={incomes}
+                            onChange={(index, field, value) => handleChange(incomes, setIncomes, index, field, value, incomeSchema, 'incomes', errors, setErrors)}
+                            onAdd={() => addRow(incomes, setIncomes, { type: 'Salary', amount: '' })}
+                            onRemove={(index) => removeRow(incomes, setIncomes, index)}
+                            errors={errors.incomes || []}
+                            readOnly={readOnly}
+                        />
+                    </div>
+                    <div ref={assetsRef}>
+                        <AssetsSection
+                            assets={assets}
+                            onChange={(index, field, value) => handleChange(assets, setAssets, index, field, value, assetSchema, 'assets', errors, setErrors)}
+                            onAdd={() => addRow(assets, setAssets, { type: 'Liquidity', amount: '' })}
+                            onRemove={(index) => removeRow(assets, setAssets, index)}
+                        />
+                    </div>
+                    <div ref={liabilitiesRef}>
+                        <LiabilitiesSection
+                            liabilities={liabilities}
+                            onChange={(index, field, value) => handleChange(liabilities, setLiabilities, index, field, value, liabilitySchema, 'liabilities', errors, setErrors)}
+                            onAdd={() => addRow(liabilities, setLiabilities, { type: 'Personal Loan', amount: '' })}
+                            onRemove={(index) => removeRow(liabilities, setLiabilities, index)}
+                            errors={errors.liabilities || []}
+                            totalLiabilities={totalLiabilities}
+                            readOnly={readOnly}
+                        />
+                    </div>
+                    <div ref={sourcesRef}>
+                        <SourceOfWealthSection
+                            sources={sources}
+                            onChange={(index, field, value) => handleChange(sources, setSources, index, field, value, sourceSchema, 'sources', errors, setErrors)}
+                            onAdd={() => addRow(sources, setSources, { type: 'Inheritance', amount: '' })}
+                            onRemove={(index) => removeRow(sources, setSources, index)}
+                            errors={errors.sources || []}
+                            totalSources={totalSources}
+                            readOnly={readOnly}
+                        />
+                    </div>
                     <NetWorthSection
+                        totalIncomes={totalIncomes}
                         totalAssets={totalAssets}
                         totalLiabilities={totalLiabilities}
+                        totalSources={totalSources}
                         readOnly={readOnly}
                     />
-                    <InvestmentExperienceSection
-                        investment={investment}
-                        onChange={(field, value) => setInvestment(prev => ({ ...prev, [field]: value }))}
-                        readOnly={readOnly}
-                    />
+                    <div ref={investmentRef}>
+                        <InvestmentExperienceSection
+                            investment={investment}
+                            onChange={(field, value) => setInvestment(prev => ({ ...prev, [field]: value }))}
+                            errors={errors}
+                            readOnly={readOnly}
+                        />
+                    </div>
                      <button type="submit" disabled={readOnly} className="text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 mt-4 disabled:opacity-50 disabled:cursor-not-allowed">Submit</button>
                 </form>
             </div>
