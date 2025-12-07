@@ -18,27 +18,11 @@ const authRoutes: RouteObject[] = [
             {
                 path: 'login',
                 element: (
-                    <Suspense fallback={<LoadingSpinner />}>
-                        <Login/>
-                    </Suspense>
+                        <Suspense fallback={<LoadingSpinner />}>
+                            <Login/>
+                        </Suspense>
                 )
             },
-            {
-                path: 'sign-up',
-                element: (
-                    <Suspense fallback={<LoadingSpinner />}>
-                        <SignUp/>
-                    </Suspense>
-                )
-            },
-            {
-                path: 'reset-password',
-                element: (
-                    <Suspense fallback={<LoadingSpinner />}>
-                        <ResetPassword/>
-                    </Suspense>
-                )
-            }
         ]
 
     }

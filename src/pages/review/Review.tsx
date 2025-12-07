@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { updateReview, loadReviewData } from "../../store/slices/reviewSlice";
 import api from "../../services/api";
+import { current } from "@reduxjs/toolkit";
 
 interface ReviewedUser {
     id: number;
@@ -48,7 +49,7 @@ const Review = () => {
 
     const fetchCurrentUser = async (token: string): Promise<{ users: ReviewedUser[] }> => {
         const response = await api.get('/users');
-        return response.data?.users;
+         return response.data?.users;
     };
 
     useEffect(() => {
@@ -70,11 +71,11 @@ const Review = () => {
 
     const users: ReviewedUser[] = Array.isArray(usersData) ? usersData : [];
 
-    const displayedUsers = users.map(user => ({
-        ...user,
-        kycStatus: localReviewData[user.id]?.status || 'pending',
-        reviewedAt: localReviewData[user.id]?.reviewedAt,
-        reviewedBy: localReviewData[user.id]?.reviewedBy
+    const displayedUsers = users.filter(u => u.id !== user?.id).map(u => ({
+        ...u,
+        kycStatus: localReviewData[u.id]?.status || 'pending',
+        reviewedAt: localReviewData[u.id]?.reviewedAt,
+        reviewedBy: localReviewData[u.id]?.reviewedBy
     }));
 
     const getStatusColor = (status: string) => {

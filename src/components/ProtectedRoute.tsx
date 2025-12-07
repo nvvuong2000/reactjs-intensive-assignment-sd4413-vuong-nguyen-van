@@ -3,6 +3,8 @@ import { Navigate, useParams } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
 import { getAuthRedirect } from "./AppRedirect";
 
+const ForbiddenRedirect = () => <Navigate to="/pages/403" replace />;
+
 interface ProtectedRouteProps {
     children: ReactNode;
     requiredRole?: 'user' | 'officer';
@@ -13,19 +15,18 @@ export const ProtectedRoute = ({ children, requiredRole, allowOwnProfileOnly }: 
     const { id: urlUserId } = useParams<{ id: string }>();
     const { user, isAuthenticated } = useAppSelector(state => state.auth);
 
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated) {
         return <Navigate to="/auth/login" replace />;
     }
 
-    if (requiredRole && user.role !== requiredRole) {
-        if (user.role !== 'officer') {
-            return <Navigate to="/auth/login" replace />;
-        }
+    if (requiredRole && user && user.role !== requiredRole) {
+        return ForbiddenRedirect();
     }
-    if (allowOwnProfileOnly && user.role === 'user') {
+
+    if (allowOwnProfileOnly && user && user.role === 'user') {
         const currentUserId = user.id.toString();
         if (urlUserId && urlUserId !== currentUserId) {
-            return <Navigate to={`/user/${currentUserId}/pi`} replace />;
+            return ForbiddenRedirect();
         }
     }
     return <>{children}</>;
@@ -43,7 +44,21 @@ export const RoleBasedRoute = ({ children, allowedRoles }: RoleBasedRouteProps) 
         return <Navigate to="/auth/login" replace />;
     }
     if (!allowedRoles.includes(user.role)) {
-        return <Navigate to="/auth/login" replace />;
+        return ForbiddenRedirect();
+    }
+
+    return <>{children}</>;
+};
+
+interface GuestRouteProps {
+    children: ReactNode;
+}
+
+export const GuestRoute = ({ children }: GuestRouteProps) => {
+    const { isAuthenticated } = useAppSelector(state => state.auth);
+
+    if (isAuthenticated) {
+        return <Navigate to="/pages/home" replace />;
     }
 
     return <>{children}</>;

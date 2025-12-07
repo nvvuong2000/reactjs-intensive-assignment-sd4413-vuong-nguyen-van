@@ -19,10 +19,10 @@ interface AuthState {
 }
 
 const initialState: AuthState = {
-  user: null,
+  user: JSON.parse(localStorage.getItem('authUser') || 'null'),
   token: localStorage.getItem('authToken'),
-  isAuthenticated: false,
-  isLoading: true,
+  isAuthenticated: !!localStorage.getItem('authToken'),
+  isLoading: false,
 };
 
 const authSlice = createSlice({
@@ -33,6 +33,11 @@ const authSlice = createSlice({
       state.user = action.payload;
       state.isAuthenticated = !!action.payload;
       state.isLoading = false;
+      if (action.payload) {
+        localStorage.setItem('authUser', JSON.stringify(action.payload));
+      } else {
+        localStorage.removeItem('authUser');
+      }
     },
     setToken: (state, action: PayloadAction<string | null>) => {
       state.token = action.payload;
@@ -48,6 +53,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.isLoading = false;
       localStorage.removeItem('authToken');
+      localStorage.removeItem('authUser');
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;

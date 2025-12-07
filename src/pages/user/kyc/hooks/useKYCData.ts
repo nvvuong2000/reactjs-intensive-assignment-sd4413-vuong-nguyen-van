@@ -7,6 +7,7 @@ import { ContactType, AddressType } from '../constants';
 import { BasicInfo } from '../types';
 
 interface UseKYCDataProps {
+    urlUserId?: string;
     basicInfo: BasicInfo;
     setBasicInfo: React.Dispatch<React.SetStateAction<BasicInfo>>;
     setAddresses: React.Dispatch<React.SetStateAction<any[]>>;
@@ -22,6 +23,7 @@ interface UseKYCDataProps {
 }
 
 export const useKYCData = ({
+    urlUserId,
     basicInfo,
     setBasicInfo,
     setAddresses,
@@ -38,13 +40,14 @@ export const useKYCData = ({
     const { user } = useAppSelector(state => state.auth);
 
     const { data: apiUser, isLoading: isApiLoading } = useQuery({
-        queryKey: ['user', user?.id],
+        queryKey: ['user', urlUserId || user?.id],
         queryFn: async () => {
-            if (!user?.id) return null;
-            const response = await api.get(`/users/${user.id}`);
+            const targetUserId = urlUserId || user?.id;
+            if (!targetUserId) return null;
+            const response = await api.get(`/users/${targetUserId}`);
             return response.data;
         },
-        enabled: !!user?.id,
+        enabled: !!(urlUserId || user?.id),
     });
 
     const userData = apiUser;

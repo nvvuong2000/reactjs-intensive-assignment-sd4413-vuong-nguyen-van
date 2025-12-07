@@ -5,6 +5,7 @@ import authRoutes from "./auth/auth.routes";
 import { AppRedirect } from "../components/AppRedirect";
 import LoadingSpinner from "../components/LoadingSpinner";
 const HomeComponent = React.lazy(() => import("./home/HomeComponent"));
+const ForbiddenPage = React.lazy(() => import("./ForbiddenPage"));
 
 const pageRoutes = [
     {
@@ -24,6 +25,14 @@ const pageRoutes = [
                 element: (
                     <Suspense fallback={<LoadingSpinner />}>
                         <HomeComponent/>
+                    </Suspense>
+                )
+            },
+            {
+                path: '403',
+                element: (
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <ForbiddenPage/>
                     </Suspense>
                 )
             },

@@ -28,6 +28,7 @@ import { calculateTotals } from './utils/calculationUtils';
 import { scrollToFirstError } from './utils/errorUtils';
 
 const UserKYC = () => {
+    const { id: urlUserId } = useParams<{ id: string }>();
     const {
         basicInfo,
         setBasicInfo,
@@ -67,6 +68,7 @@ const UserKYC = () => {
     } = useKYCState();
 
     const { userData, isApiLoading } = useKYCData({
+        urlUserId,
         basicInfo,
         setBasicInfo,
         setAddresses,
